@@ -4,8 +4,11 @@ import urllib
 import urllib.error
 import urllib.request
 import datetime
-import time
 
+#############################################################
+##########ON COMMENCE PAR EXTRAIRE LES VILLES QUI############
+###################DES CONTRATS AVEC JCDECAUX################
+#############################################################
 
 def ville_contrats():
     """
@@ -27,87 +30,111 @@ def ville_contrats():
 
 villes_api = ville_contrats()
 
-
+'''
 def urls_par_contrats(villes):
-    '''
+    """
     Retourne les liens associés à chaque contrat
-    '''
+    """
     urls = []
     for ville in villes:
         urls.append("https://api.jcdecaux.com/vls/v3/stations?contract=" + str(ville) + "&apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743")
     return urls
 
 urls = urls_par_contrats(villes_api)
+'''
 
 
+#############################################################
+###########ON RECUPERE LES DONNEES QU'ON MET EN CSV##########
+#############################################################
 
-########################################################################
-#################ON ESSAYE DE RECUPERER LES DONNEES DE LYON#############
-########################################################################
-
-url = "https://api.jcdecaux.com/vls/v3/stations?contract=lyon&apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743"
-dataStation = requests.get(url)
-data = dataStation.json()
-
-##########################QUELQUES DONNEES LYON#########################
-nbVeloDispo = []
-Capacite = []
-nom_station = [] 
-adresse_station = []
-latitude = []
-longitude = []
-for station in data:
-    nbVeloDispo.append(station['totalStands']['availabilities']['bikes'])
-    Capacite.append(station["totalStands"]["capacity"])
-    nom_station.append(station['name'])
-    adresse_station.append(station['address'])
-    latitude.append(station['position']['latitude'])
-    longitude.append(station['position']['longitude'])
-
-#print(nbVeloDispo)
-#print(Capacite)
-#print(nom_station)
-#print(adresse_station)
-#print(latitude)
-#print(longitude)
-
-
-########################################################################
-#######################ON ITERE SUR TOUTES LES VILLES###################
-########################################################################
-  
-with open("urls.txt", "w") as file:
-    for url in urls:
-        file.write(url + "\n")  
+for ville in villes_api:
+    
+    url = "https://api.jcdecaux.com/vls/v3/stations?contract=" + str(ville) + "&apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743" #URL qui change en fonction de la ville
+    dataStation = requests.get(url)
+    data = dataStation.json()
+    
+    # totalStands
+    nbVeloDispo_total = []
+    nbEmplacementDispo_total = []
+    Capacite_total = []
+    # mainStands
+    nbVeloDispo_main = []
+    nbEmplacementDispo_main = []
+    Capacite_main = []
+    # overflowStands 
+    nbVeloDispo_overflow = []
+    nbEmplacementDispo_overflow = []
+    Capacite_overflow = []
+    
+    number = []
+    nom_station = [] 
+    adresse_station = []
+    latitude = []
+    longitude = []
+    statut = []
+    connecte_systeme = []
+    derniere_maj = []
+    
+    entetes = ["nom_station","adresse_station","numero","latitude","longitude","statut"
+               ,"connecte_systeme","nbVeloDispo_total","nbEmplacementDispo_total","Capacite_total"
+               ,"nbVeloDispo_main","nbEmplacementDispo_main","Capacite_main",
+               "nbVeloDispo_overflow","nbEmplacementDispo_overflow","Capacite_overflow","derniere_maj"]
+    
         
         
+    for stations in data:
+        nbVeloDispo_total.append(stations['totalStands']['availabilities']['bikes'])
+        nbEmplacementDispo_total.append(stations['totalStands']['availabilities']['stands'])
+        Capacite_total.append(stations['totalStands']['capacity'])
+            
+        nbVeloDispo_main.append(stations['mainStands']['availabilities']['bikes'])
+        nbEmplacementDispo_main.append(stations['mainStands']['availabilities']['stands'])
+        Capacite_main.append(stations['mainStands']['capacity'])
+        
+        if stations['overflow'] == False:
+            nbVeloDispo_overflow.append(0)
+            nbEmplacementDispo_overflow.append(0)
+            Capacite_overflow.append(0)
+        else : 
+            nbVeloDispo_overflow.append(stations['overflowStands']['availabilities']['bikes'])
+            nbEmplacementDispo_overflow.append(stations['overflowStands']['availabilities']['stands'])
+            Capacite_overflow.append(stations['overflowStands']['capacity'])
+        
+        if stations['connected'] == False:
+            connecte_systeme.append('0') #0 si pas connecté
+        else : 
+            connecte_systeme.append('1') #1 si connecté
+            
+        number.append(stations['number'])
+        nom_station.append(stations['name'])
+        adresse_station.append(stations['address'].replace(',',' '))
+        latitude.append(stations['position']['latitude'])
+        longitude.append(stations['position']['longitude'])
+        statut.append(stations['status'])
+        derniere_maj.append(stations['lastUpdate'])
+
+#############################################################
+####################POUR ECRIRE LES CSV######################
+#############################################################
+
 """    
-with open("urls.txt", "r") as inf:
-    for row in inf:
-        url = row.strip()    
-        response = requests.get(url)
-        json_data = json.loads(response.text)
-        nom_station = [] 
-        adresse_station = []
-        latitude = []
-        longitude = []
-        print("Analyse de la ligne " + row + "\n")
-        for element in json_data:
-            nom_station[element].append(element['name'])
-            adresse_station[element].append(element['address'])
-            latitude[element].append(element['position']['latitude'])
-            longitude[element].append(element['position']['longitude'])
-"""
-
-#############################DONNEES DE VILNIUS########################         
-"""
-for i in range(37):
-    print(nom_station[i] + ", " + adresse_station[i] + ", " + str(latitude[i]) + ", " + str(longitude[i]))
-"""
+    with open("velib_" + str(ville) + ".csv", "w", encoding="utf-8") as outf:
+        ligneEntete = ",".join(entetes) + "\n"
+        outf.write(ligneEntete)
+        for i in range(len(data)):
+            outf.write(nom_station[i] + "," + adresse_station[i] + "," + str(number[i]) 
+            + "," + str(latitude[i]) + "," + str(longitude[i]) + "," + statut[i] + "," + connecte_systeme[i] 
+            + "," + str(nbVeloDispo_total[i]) + "," + str(nbEmplacementDispo_total[i]) + ","
+            + str(Capacite_total[i]) + "," + str(nbVeloDispo_main[i]) + "," + str(nbEmplacementDispo_main[i]) + ","
+            + str(Capacite_main[i]) + "," + str(nbVeloDispo_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
+            + str(Capacite_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
+"""           
+        
 
 
-########################################################################
-########################################################################
+#############################################################
+#############################################################
             
 
 def get_json(contract):
