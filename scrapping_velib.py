@@ -1,20 +1,47 @@
+# -*- coding: utf-8 -*-
+import time
 import requests
 import json
-import urllib
-import urllib.error
-import urllib.request
+import threading 
 import datetime
+
+# Debut du decompte du temps
+start_time = time.time()
+
+
+#############################################################
+#################ON AFFECTE LES VARIABLES####################
+#############################################################
+apiKey = "720018d1d90eabf26f779b2c85f07ded04e3f743"
+url_c = 'https://api.jcdecaux.com/vls/v3/contracts?apiKey=' + apiKey
+
+delai_recup_data_min = 1
+#Il s'agit du délai entre les différentes périodes de récupération de données. 
+#Ce délai est en minutes.
+
+stop_collect_data = datetime.datetime.strptime('2020-04-03 14:30:00.0000', '%Y-%m-%d %H:%M:%S.%f')
+#Il faut choisir un jour et une horaire de fin de collecte de données
+#Si on ne veut pas de fin on met None
+
+
+
 
 #############################################################
 ##########ON COMMENCE PAR EXTRAIRE LES VILLES QUI############
-###################DES CONTRATS AVEC JCDECAUX################
+###############ONT DES CONTRATS AVEC JCDECAUX################
 #############################################################
 
-def ville_contrats():
+def ville_contrats(url):
     """
-    Retourne la liste des contrats.
+    Retourne la liste des villes qui ont un contrat avec JCDecaux
+    
+    
+    @return     list, retourne une liste classée dans l'ordre alphabétique,
+                quelque chose comme : ['ville1','ville2', ....,'ville25']
     """
-    url_contrats = "https://api.jcdecaux.com/vls/v3/contracts?apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743"
+    
+    url_contrats = url
+    #URL qui donne toutes les villes qui ont un contrat
     
     r = requests.get(url_contrats)
     json_data = json.loads(r.text)
@@ -27,8 +54,7 @@ def ville_contrats():
     contrats_JCDecaux.sort()
     return contrats_JCDecaux     
 
-
-villes_api = ville_contrats()
+villes = ville_contrats(url_c)
 
 '''
 def urls_par_contrats(villes):
@@ -39,7 +65,6 @@ def urls_par_contrats(villes):
     for ville in villes:
         urls.append("https://api.jcdecaux.com/vls/v3/stations?contract=" + str(ville) + "&apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743")
     return urls
-
 urls = urls_par_contrats(villes_api)
 '''
 
@@ -48,126 +73,170 @@ urls = urls_par_contrats(villes_api)
 ###########ON RECUPERE LES DONNEES QU'ON MET EN CSV##########
 #############################################################
 
-for ville in villes_api:
-    
-    url = "https://api.jcdecaux.com/vls/v3/stations?contract=" + str(ville) + "&apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743" #URL qui change en fonction de la ville
-    dataStation = requests.get(url)
-    data = dataStation.json()
-    
-    # totalStands
-    nbVeloDispo_total = []
-    nbEmplacementDispo_total = []
-    Capacite_total = []
-    # mainStands
-    nbVeloDispo_main = []
-    nbEmplacementDispo_main = []
-    Capacite_main = []
-    # overflowStands 
-    nbVeloDispo_overflow = []
-    nbEmplacementDispo_overflow = []
-    Capacite_overflow = []
-    
-    number = []
-    nom_station = [] 
-    adresse_station = []
-    latitude = []
-    longitude = []
-    statut = []
-    connecte_systeme = []
-    derniere_maj = []
-    
-    entetes = ["nom_station","adresse_station","numero","latitude","longitude","statut"
-               ,"connecte_systeme","nbVeloDispo_total","nbEmplacementDispo_total","Capacite_total"
-               ,"nbVeloDispo_main","nbEmplacementDispo_main","Capacite_main",
-               "nbVeloDispo_overflow","nbEmplacementDispo_overflow","Capacite_overflow","derniere_maj"]
+
+def collect_data_csv(villes_api):
+    """
+    Cette fonction permet de créer un CSV par ville présent dans l'API (25).
+    Ces CSV sont composés de toutes les données temps-réel disponible sur l'API
+    JCDecaux pour toutes les stations de chaque ville et quelques données 
+    statiques.
     
         
+    @param      villes_api        Toutes les villes de l'API JCDecaux récupéré 
+                                  avec la fonction ville_contrats()
+    """
+    for ville in villes_api:
         
-    for stations in data:
-        nbVeloDispo_total.append(stations['totalStands']['availabilities']['bikes'])
-        nbEmplacementDispo_total.append(stations['totalStands']['availabilities']['stands'])
-        Capacite_total.append(stations['totalStands']['capacity'])
+        url = "https://api.jcdecaux.com/vls/v3/stations?contract=" + str(ville) + "&apiKey=" + apiKey 
+        #URL qui change en fonction de la ville
+        dataStation = requests.get(url)
+        data = dataStation.json()
+
+        # DONNÉES STATIQUES
+        number = []
+        nom_station = [] 
+        adresse_station = []
+        latitude = []
+        longitude = []
+
+      
+        # DONNÉES DYNAMIQUES
+        statut = []
+        connecte_systeme = []
+        derniere_maj = []
+        
+        # données totalStands
+        nbVeloDispo_total = [] # le nombre total de vélos présents
+        nbEmplacementDispo_total = []  # le nombre d'emplacements libres
+        Capacite_total = [] # la capacité totale d'accueil de vélo
+        
+        # données mainStands
+        nbVeloDispo_main = [] # le nombre total de vélos accrochés
+        nbEmplacementDispo_main = [] # le nombre de points d'attache libres
+        Capacite_main = [] # la capacité d'accueil de vélos en accroche physique
+        
+        # données overflowStands 
+        nbVeloDispo_overflow = [] # le nombre de vélos présents en overflow
+        nbEmplacementDispo_overflow = [] # le nombre d'emplacements overflow libres
+        Capacite_overflow = [] #  la capacité d'accueil de vélos en overflow
+        
+        #On crée la première ligne pour notre futur CSV, il s'agit de toutes 
+        #les variables qu'on veut récupérer
+        
+        entetes = ["nom_station","adresse_station","numero","latitude","longitude","statut"
+                   ,"connecte_systeme","nbVeloDispo_total","nbEmplacementDispo_total","Capacite_total"
+                   ,"nbVeloDispo_main","nbEmplacementDispo_main","Capacite_main",
+                   "nbVeloDispo_overflow","nbEmplacementDispo_overflow","Capacite_overflow","derniere_maj"]
+        
             
-        nbVeloDispo_main.append(stations['mainStands']['availabilities']['bikes'])
-        nbEmplacementDispo_main.append(stations['mainStands']['availabilities']['stands'])
-        Capacite_main.append(stations['mainStands']['capacity'])
-        
-        if stations['overflow'] == False:
-            nbVeloDispo_overflow.append(0)
-            nbEmplacementDispo_overflow.append(0)
-            Capacite_overflow.append(0)
-        else : 
-            nbVeloDispo_overflow.append(stations['overflowStands']['availabilities']['bikes'])
-            nbEmplacementDispo_overflow.append(stations['overflowStands']['availabilities']['stands'])
-            Capacite_overflow.append(stations['overflowStands']['capacity'])
-        
-        if stations['connected'] == False:
-            connecte_systeme.append('0') #0 si pas connecté
-        else : 
-            connecte_systeme.append('1') #1 si connecté
             
-        number.append(stations['number'])
-        nom_station.append(stations['name'])
-        adresse_station.append(stations['address'].replace(',',' '))
-        latitude.append(stations['position']['latitude'])
-        longitude.append(stations['position']['longitude'])
-        statut.append(stations['status'])
-        derniere_maj.append(stations['lastUpdate'])
-
-#############################################################
-####################POUR ECRIRE LES CSV######################
-#############################################################
-
-"""    
-    with open("velib_" + str(ville) + ".csv", "w", encoding="utf-8") as outf:
-        ligneEntete = ",".join(entetes) + "\n"
-        outf.write(ligneEntete)
-        for i in range(len(data)):
-            outf.write(nom_station[i] + "," + adresse_station[i] + "," + str(number[i]) 
-            + "," + str(latitude[i]) + "," + str(longitude[i]) + "," + statut[i] + "," + connecte_systeme[i] 
-            + "," + str(nbVeloDispo_total[i]) + "," + str(nbEmplacementDispo_total[i]) + ","
-            + str(Capacite_total[i]) + "," + str(nbVeloDispo_main[i]) + "," + str(nbEmplacementDispo_main[i]) + ","
-            + str(Capacite_main[i]) + "," + str(nbVeloDispo_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
-            + str(Capacite_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
-"""           
-        
-
-
-#############################################################
-#############################################################
+        for stations in data:
+            nbVeloDispo_total.append(stations['totalStands']['availabilities']['bikes'])
+            nbEmplacementDispo_total.append(stations['totalStands']['availabilities']['stands'])
+            Capacite_total.append(stations['totalStands']['capacity'])
+                
+            nbVeloDispo_main.append(stations['mainStands']['availabilities']['bikes'])
+            nbEmplacementDispo_main.append(stations['mainStands']['availabilities']['stands'])
+            Capacite_main.append(stations['mainStands']['capacity'])
             
+            if stations['overflow'] == False:
+                nbVeloDispo_overflow.append(0)
+                nbEmplacementDispo_overflow.append(0)
+                Capacite_overflow.append(0)
+            else : 
+                nbVeloDispo_overflow.append(stations['overflowStands']['availabilities']['bikes'])
+                nbEmplacementDispo_overflow.append(stations['overflowStands']['availabilities']['stands'])
+                Capacite_overflow.append(stations['overflowStands']['capacity'])
+            
+            if stations['connected'] == False:
+                connecte_systeme.append('0') #0 si pas connecté
+            else : 
+                connecte_systeme.append('1') #1 si connecté
+                
+            number.append(stations['number'])
+            nom_station.append(stations['name'])
+            adresse_station.append(stations['address'].replace(',',' '))
+            latitude.append(stations['position']['latitude'])
+            longitude.append(stations['position']['longitude'])
+            statut.append(stations['status'])
+            derniere_maj.append(stations['lastUpdate'])
+    
+    
+    #############################################################
+    ####################POUR ECRIRE LES CSV######################
+    #############################################################
+    
+     
+        with open("velib_" + str(ville) + ".csv", "w", encoding="utf-8") as outf:
+            ligneEntete = ",".join(entetes) + "\n"
+            outf.write(ligneEntete)
+            for i in range(len(data)):
+                outf.write(nom_station[i] + "," + adresse_station[i] + "," + str(number[i]) 
+                + "," + str(latitude[i]) + "," + str(longitude[i]) + "," + statut[i] + "," + connecte_systeme[i] 
+                + "," + str(nbVeloDispo_total[i]) + "," + str(nbEmplacementDispo_total[i]) + ","
+                + str(Capacite_total[i]) + "," + str(nbVeloDispo_main[i]) + "," + str(nbEmplacementDispo_main[i]) + ","
+                + str(Capacite_main[i]) + "," + str(nbVeloDispo_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
+                + str(Capacite_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
 
-def get_json(contract):
-    url = "https://api.jcdecaux.com/vls/v3/stations?contract=" + str(contract) + "&apiKey=720018d1d90eabf26f779b2c85f07ded04e3f743"
-    response = requests.get(url)
-    js = json.loads(response.text)
+
+
+#############################################################
+############# RECUPERATION DES DONNEES MANUELLE #############
+#############################################################
+def collect_main():
+    """
+    Cette fonction permet automatiser la récupération des données au format CSV.
+    On a utilisé le multi-threading pour aller plus vite.
+    Avec le programme classique le script prenait 3 secondes environ.
+    Grâce au multi-threading il prend moins de 0,5 secondes.
+    """
+    if __name__ == "__main__": 
+        thread1 = threading.Thread (target = collect_data_csv, args = (villes,))
+        thread1.start()                   
+
+
+############## COLLECTE DES DONNEES A LA MAIN ###############
+collect_main()
+
+
+
+#############################################################
+######### AUTOMATISER LA RECUPERATION DES DONNEES ###########
+################## AVEC UN DELAI CHOISI #####################
+#############################################################                
+
+                
+def collect_auto(delai_minutes, stop_collect):
+    """
+    Cette fonction permet automatiser la récupération des données au format CSV.
+   
+        
+    @param      delai             Il s'agit du délai entre les différentes 
+                                  périodes de récupération de données. Ce délai
+                                  est en minutes.
+    @param      stop_collect      On peut définir une heure ou l'on veut arrêter
+                                  de récupérer les données. Il faut définir
+                                  l'horaire ou mettre None si on veut tout le
+                                  temps récupérer les données.
+    """
     now = datetime.datetime.now()
-    for o in js:
-        o["number"] = int(o["number"])
-        o["banking"] = 1 if o["banking"] == "True" else 0
-        o["bonus"] = 1 if o["bonus"] == "True" else 0
-        
-        o["totalStands"]["availabilities"]["bikes"] = int(o["totalStands"]["availabilities"]["bikes"])
-        o["totalStands"]["availabilities"]["stands"] = int(o["totalStands"]["availabilities"]["stands"])
-        o["totalStands"]["availabilities"]["mechanicalBikes"] = int(o["totalStands"]["availabilities"]["mechanicalBikes"])
-        o["totalStands"]["availabilities"]["electricalBikes"] = int(o["totalStands"]["availabilities"]["electricalBikes"])
-        o["totalStands"]["availabilities"]["electricalRemovableBatteryBikes"] = int(o["totalStands"]["availabilities"]["electricalRemovableBatteryBikes"])
-        o["totalStands"]["availabilities"]["electricalInternalBatteryBikes"] = int(o["totalStands"]["availabilities"]["electricalInternalBatteryBikes"])
-        o["totalStands"]["capacity"] = int(o["totalStands"]["capacity"])
-        
-        o["mainStands"]["availabilities"]["bikes"] = int(o["mainStands"]["availabilities"]["bikes"])
-        o["mainStands"]["availabilities"]["stands"] = int(o["mainStands"]["availabilities"]["stands"])
-        o["mainStands"]["availabilities"]["mechanicalBikes"] = int(o["mainStands"]["availabilities"]["mechanicalBikes"])
-        o["mainStands"]["availabilities"]["electricalBikes"] = int(o["mainStands"]["availabilities"]["electricalBikes"])
-        o["mainStands"]["availabilities"]["electricalRemovableBatteryBikes"] = int(o["mainStands"]["availabilities"]["electricalRemovableBatteryBikes"])
-        o["mainStands"]["availabilities"]["electricalInternalBatteryBikes"] = int(o["mainStands"]["availabilities"]["electricalInternalBatteryBikes"])
-        o["mainStands"]["capacity"] = int(o["mainStands"]["capacity"])
-        
-        o["collect_date"] = now
-    return js
+    while stop_collect is None or now < stop_collect:
+        now = datetime.datetime.now()
+        if __name__ == "__main__": 
+            thread1 = threading.Thread (target = collect_data_csv, args = (villes,))
+            thread1.start()
+            delai_secondes = 60*delai_minutes
+            time.sleep(delai_secondes)
 
-""" 
-for ville in villes_api:
-    print(get_json(ville))
-"""
+
+
+################ COLLECTE DES DONNEES AUTO ##################
+
+
+#collect_auto(delai_recup_data_min, stop_collect_data)
+          
+
+        
+# Affichage du temps d execution
+print("Temps d execution : %s secondes." % round((time.time() - start_time),2))
 
