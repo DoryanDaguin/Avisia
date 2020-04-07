@@ -14,7 +14,6 @@ start_time = time.time()
 #############################################################
 #################ON AFFECTE LES VARIABLES####################
 #############################################################
-
 apiKey = "720018d1d90eabf26f779b2c85f07ded04e3f743"
 url_c = 'https://api.jcdecaux.com/vls/v3/contracts?apiKey=' + apiKey
 
@@ -189,7 +188,7 @@ def collect_data_csv(villes_api):
 
 
 #############################################################
-############# RECUPERATION DES DONNEES MANUELLE #############
+############ RECUPERATION DES DONNEES A LA MAIN #############
 #############################################################
 def collect_main():
     """
@@ -244,6 +243,4 @@ def collect_auto(delai_minutes, stop_collect):
         
 # Affichage du temps d execution
 print("Temps d execution : %s secondes." % round((time.time() - start_time),2))
-
-
 
