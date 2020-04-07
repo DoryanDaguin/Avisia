@@ -12,6 +12,7 @@ start_time = time.time()
 #############################################################
 #################ON AFFECTE LES VARIABLES####################
 #############################################################
+
 apiKey = "720018d1d90eabf26f779b2c85f07ded04e3f743"
 url_c = 'https://api.jcdecaux.com/vls/v3/contracts?apiKey=' + apiKey
 
@@ -19,7 +20,7 @@ delai_recup_data_min = 1
 #Il s'agit du délai entre les différentes périodes de récupération de données. 
 #Ce délai est en minutes.
 
-stop_collect_data = datetime.datetime.strptime('2020-04-03 14:30:00.0000', '%Y-%m-%d %H:%M:%S.%f')
+stop_collect_data = datetime.datetime.strptime('2020-04-07 09:47:00.0000', '%Y-%m-%d %H:%M:%S.%f')
 #Il faut choisir un jour et une horaire de fin de collecte de données
 #Si on ne veut pas de fin on met None
 
@@ -109,7 +110,9 @@ def collect_data_csv(villes_api):
         nbVeloDispo_total = [] # le nombre total de vélos présents
         nbEmplacementDispo_total = []  # le nombre d'emplacements libres
         Capacite_total = [] # la capacité totale d'accueil de vélo
-        
+        nbVelo_electrique_total = [] # le nombre total de vélos électriques présents
+        nbVelo_mecanique_total = [] # le nombre total de vélos mécaniques présents
+    
         # données mainStands
         nbVeloDispo_main = [] # le nombre total de vélos accrochés
         nbEmplacementDispo_main = [] # le nombre de points d'attache libres
@@ -123,10 +126,10 @@ def collect_data_csv(villes_api):
         #On crée la première ligne pour notre futur CSV, il s'agit de toutes 
         #les variables qu'on veut récupérer
         
-        entetes = ["nom_station","adresse_station","numero","latitude","longitude","statut"
-                   ,"connecte_systeme","nbVeloDispo_total","nbEmplacementDispo_total","Capacite_total"
-                   ,"nbVeloDispo_main","nbEmplacementDispo_main","Capacite_main",
-                   "nbVeloDispo_overflow","nbEmplacementDispo_overflow","Capacite_overflow","derniere_maj"]
+        entetes = ["numero","nom_station","adresse_station","latitude","longitude","statut"
+                   ,"connecte_systeme","Capacite_total","nbEmplacementDispo_total","nbVeloDispo_total","nbVeloMecanique_dispo_total",
+                   "nbVeloElectrique_dispo_total","Capacite_main","nbEmplacementDispo_main","nbVeloDispo_main",
+                   "Capacite_overflow","nbEmplacementDispo_overflow","nbVeloDispo_overflow","derniere_maj"]
         
             
             
@@ -134,6 +137,8 @@ def collect_data_csv(villes_api):
             nbVeloDispo_total.append(stations['totalStands']['availabilities']['bikes'])
             nbEmplacementDispo_total.append(stations['totalStands']['availabilities']['stands'])
             Capacite_total.append(stations['totalStands']['capacity'])
+            nbVelo_electrique_total.append(stations['totalStands']['availabilities']['electricalBikes'])
+            nbVelo_mecanique_total.append(stations['totalStands']['availabilities']['mechanicalBikes'])
                 
             nbVeloDispo_main.append(stations['mainStands']['availabilities']['bikes'])
             nbEmplacementDispo_main.append(stations['mainStands']['availabilities']['stands'])
@@ -171,12 +176,13 @@ def collect_data_csv(villes_api):
             ligneEntete = ",".join(entetes) + "\n"
             outf.write(ligneEntete)
             for i in range(len(data)):
-                outf.write(nom_station[i] + "," + adresse_station[i] + "," + str(number[i]) 
+                outf.write(str(number[i]) + "," + nom_station[i] + "," + adresse_station[i]
                 + "," + str(latitude[i]) + "," + str(longitude[i]) + "," + statut[i] + "," + connecte_systeme[i] 
-                + "," + str(nbVeloDispo_total[i]) + "," + str(nbEmplacementDispo_total[i]) + ","
-                + str(Capacite_total[i]) + "," + str(nbVeloDispo_main[i]) + "," + str(nbEmplacementDispo_main[i]) + ","
-                + str(Capacite_main[i]) + "," + str(nbVeloDispo_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
-                + str(Capacite_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
+                + "," + str(Capacite_total[i]) + "," + str(nbEmplacementDispo_total[i]) + ","
+                + str(nbVeloDispo_total[i]) + "," + str(nbVelo_mecanique_total[i]) + "," + str(nbVelo_electrique_total[i])
+                + "," + str(Capacite_main[i]) + "," + str(nbEmplacementDispo_main[i]) + ","
+                + str(nbVeloDispo_main[i]) + "," + str(Capacite_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
+                + str(nbVeloDispo_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
 
 
 
@@ -190,9 +196,8 @@ def collect_main():
     Avec le programme classique le script prenait 3 secondes environ.
     Grâce au multi-threading il prend moins de 0,5 secondes.
     """
-    if __name__ == "__main__": 
-        thread1 = threading.Thread (target = collect_data_csv, args = (villes,))
-        thread1.start()                   
+    thread1 = threading.Thread (target = collect_data_csv, args = (villes,))
+    thread1.start()                   
 
 
 ############## COLLECTE DES DONNEES A LA MAIN ###############
@@ -222,16 +227,14 @@ def collect_auto(delai_minutes, stop_collect):
     now = datetime.datetime.now()
     while stop_collect is None or now < stop_collect:
         now = datetime.datetime.now()
-        if __name__ == "__main__": 
-            thread1 = threading.Thread (target = collect_data_csv, args = (villes,))
-            thread1.start()
-            delai_secondes = 60*delai_minutes
-            time.sleep(delai_secondes)
+        thread1 = threading.Thread (target = collect_data_csv, args = (villes,))
+        thread1.start()
+        delai_secondes = 60*delai_minutes
+        time.sleep(delai_secondes)
 
 
 
 ################ COLLECTE DES DONNEES AUTO ##################
-
 
 #collect_auto(delai_recup_data_min, stop_collect_data)
           
@@ -239,4 +242,6 @@ def collect_auto(delai_minutes, stop_collect):
         
 # Affichage du temps d execution
 print("Temps d execution : %s secondes." % round((time.time() - start_time),2))
+
+
 
