@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+#Importation
 import time
 import requests
 import json
