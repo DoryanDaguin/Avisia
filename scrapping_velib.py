@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# -*- coding: utf-8 -*-
+
 #Importation
 import time
 import requests
@@ -17,14 +19,13 @@ start_time = time.time()
 apiKey = "720018d1d90eabf26f779b2c85f07ded04e3f743"
 url_c = 'https://api.jcdecaux.com/vls/v3/contracts?apiKey=' + apiKey
 
-delai_recup_data_min = 1
+delai_recup_data_min = 3
 #Il s'agit du délai entre les différentes périodes de récupération de données. 
 #Ce délai est en minutes.
 
-stop_collect_data = datetime.datetime.strptime('2020-04-07 09:47:00.0000', '%Y-%m-%d %H:%M:%S.%f')
+stop_collect_data = datetime.datetime.strptime('2020-04-08 15:55:00.0000', '%Y-%m-%d %H:%M:%S.%f')
 #Il faut choisir un jour et une horaire de fin de collecte de données
 #Si on ne veut pas de fin on met None
-
 
 
 
@@ -69,6 +70,7 @@ def urls_par_contrats(villes):
     return urls
 urls = urls_par_contrats(villes_api)
 '''
+
 
 
 #############################################################
@@ -126,13 +128,7 @@ def collect_data_csv(villes_api):
         
         #On crée la première ligne pour notre futur CSV, il s'agit de toutes 
         #les variables qu'on veut récupérer
-        
-        entetes = ["numero","nom_station","adresse_station","latitude","longitude","statut"
-                   ,"connecte_systeme","Capacite_total","nbEmplacementDispo_total","nbVeloDispo_total","nbVeloMecanique_dispo_total",
-                   "nbVeloElectrique_dispo_total","Capacite_main","nbEmplacementDispo_main","nbVeloDispo_main",
-                   "Capacite_overflow","nbEmplacementDispo_overflow","nbVeloDispo_overflow","derniere_maj"]
-        
-            
+                   
             
         for stations in data:
             nbVeloDispo_total.append(stations['totalStands']['availabilities']['bikes'])
@@ -173,9 +169,7 @@ def collect_data_csv(villes_api):
     #############################################################
     
      
-        with open("velib_" + str(ville) + ".csv", "w", encoding="utf-8") as outf:
-            ligneEntete = ",".join(entetes) + "\n"
-            outf.write(ligneEntete)
+        with open("velib_" + str(ville) + ".csv", "a", encoding="utf-8") as outf:
             for i in range(len(data)):
                 outf.write(str(number[i]) + "," + nom_station[i] + "," + adresse_station[i]
                 + "," + str(latitude[i]) + "," + str(longitude[i]) + "," + statut[i] + "," + connecte_systeme[i] 
@@ -184,6 +178,26 @@ def collect_data_csv(villes_api):
                 + "," + str(Capacite_main[i]) + "," + str(nbEmplacementDispo_main[i]) + ","
                 + str(nbVeloDispo_main[i]) + "," + str(Capacite_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
                 + str(nbVeloDispo_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
+                
+
+#############################################################
+############## ECRITURE DE L'EN-TÊTE DU CSV  ################
+#############################################################
+
+def csv_entete():
+    """
+    Cette fonction permet de créer les CSV.
+    Elle permet d'écrire la première ligne, celle des variables.    
+    """
+    for ville in villes:
+        entetes = ["numero","nom_station","adresse_station","latitude","longitude","statut"
+                   ,"connecte_systeme","Capacite_total","nbEmplacementDispo_total","nbVeloDispo_total","nbVeloMecanique_dispo_total",
+                   "nbVeloElectrique_dispo_total","Capacite_main","nbEmplacementDispo_main","nbVeloDispo_main",
+                   "Capacite_overflow","nbEmplacementDispo_overflow","nbVeloDispo_overflow","derniere_maj"]
+        
+        with open("velib_" + str(ville) + ".csv", "w", encoding="utf-8") as outf:
+            ligneEntete = ",".join(entetes) + "\n"
+            outf.write(ligneEntete)
 
 
 
@@ -192,7 +206,8 @@ def collect_data_csv(villes_api):
 #############################################################
 def collect_main():
     """
-    Cette fonction permet automatiser la récupération des données au format CSV.
+    Cette fonction permet automatiser la récupération des données.
+    On les écrit dans les fichiers CSV créés.
     On a utilisé le multi-threading pour aller plus vite.
     Avec le programme classique le script prenait 3 secondes environ.
     Grâce au multi-threading il prend moins de 0,5 secondes.
@@ -202,7 +217,7 @@ def collect_main():
 
 
 ############## COLLECTE DES DONNEES A LA MAIN ###############
-collect_main()
+#collect_main()
 
 
 
@@ -211,6 +226,7 @@ collect_main()
 ################## AVEC UN DELAI CHOISI #####################
 #############################################################                
 
+csv_entete() #On appelle la fonction qui créée les CSV et la ligne d'en-tête.
                 
 def collect_auto(delai_minutes, stop_collect):
     """
@@ -237,7 +253,7 @@ def collect_auto(delai_minutes, stop_collect):
 
 ################ COLLECTE DES DONNEES AUTO ##################
 
-#collect_auto(delai_recup_data_min, stop_collect_data)
+collect_auto(delai_recup_data_min, stop_collect_data) #On appelle la fonction qui collecte les données automatiquement
           
 
         
