@@ -225,8 +225,6 @@ csv_entete() #On appelle la fonction qui créée les CSV et la ligne d'en-tête.
 def collect_auto(delai_minutes, stop_collect):
     """
     Cette fonction permet automatiser la récupération des données au format CSV.
-   
-        
     @param      delai             Il s'agit du délai entre les différentes 
                                   périodes de récupération de données. Ce délai
                                   est en minutes.
