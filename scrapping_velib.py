@@ -40,7 +40,7 @@ def ville_contrats(url):
     @return     list, retourne une liste classée dans l'ordre alphabétique,
                 quelque chose comme : ['ville1','ville2', ....,'ville25']
     """
-        url_contrats = url
+    url_contrats = url
     #URL qui donne toutes les villes qui ont un contrat
     r = requests.get(url_contrats)
     json_data = json.loads(r.text)
