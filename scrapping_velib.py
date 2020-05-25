@@ -37,23 +37,17 @@ stop_collect_data = datetime.datetime.strptime('2020-04-08 15:55:00.0000', '%Y-%
 def ville_contrats(url):
     """
     Retourne la liste des villes qui ont un contrat avec JCDecaux
-    
-    
     @return     list, retourne une liste classée dans l'ordre alphabétique,
                 quelque chose comme : ['ville1','ville2', ....,'ville25']
     """
-    
-    url_contrats = url
+        url_contrats = url
     #URL qui donne toutes les villes qui ont un contrat
-    
     r = requests.get(url_contrats)
     json_data = json.loads(r.text)
-        
     contrats_JCDecaux = []
         
     for element in json_data:
-        contrats_JCDecaux.append(element['name'])
-            
+        contrats_JCDecaux.append(element['name'])     
     contrats_JCDecaux.sort()
     return contrats_JCDecaux     
 
