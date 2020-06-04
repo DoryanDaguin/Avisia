@@ -75,14 +75,7 @@ urls = urls_par_contrats(villes_api)
 
 
 def collect_data_csv(villes_api):
-    """
-    Cette fonction permet de créer un CSV par ville présent dans l'API (25).
-    Ces CSV sont composés de toutes les données temps-réel disponible sur l'API
-    JCDecaux pour toutes les stations de chaque ville et quelques données 
-    statiques.   
-    @param      villes_api        Toutes les villes de l'API JCDecaux récupéré 
-                                  avec la fonction ville_contrats()
-    """
+
     for ville in villes_api:
         
         url = "https://api.jcdecaux.com/vls/v3/stations?contract=" + str(ville) + "&apiKey=" + apiKey 
