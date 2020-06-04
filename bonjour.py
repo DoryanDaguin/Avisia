@@ -36,12 +36,9 @@ delai_recup_data_min = 30
 def ville_contrats(url):
     """
     Retourne la liste des villes qui ont un contrat avec JCDecaux
-    
-    
     @return     list, retourne une liste classée dans l'ordre alphabétique,
                 quelque chose comme : ['ville1','ville2', ....,'ville25']
-    """
-    
+    """   
     url_contrats = url
     #URL qui donne toutes les villes qui ont un contrat
     
@@ -82,9 +79,7 @@ def collect_data_csv(villes_api):
     Cette fonction permet de créer un CSV par ville présent dans l'API (25).
     Ces CSV sont composés de toutes les données temps-réel disponible sur l'API
     JCDecaux pour toutes les stations de chaque ville et quelques données 
-    statiques.
-    
-        
+    statiques.   
     @param      villes_api        Toutes les villes de l'API JCDecaux récupéré 
                                   avec la fonction ville_contrats()
     """
@@ -102,7 +97,6 @@ def collect_data_csv(villes_api):
         latitude = []
         longitude = []
 
-      
         # DONNÉES DYNAMIQUES
         statut = []
         connecte_systeme = []
@@ -128,7 +122,6 @@ def collect_data_csv(villes_api):
         #On crée la première ligne pour notre futur CSV, il s'agit de toutes 
         #les variables qu'on veut récupérer
                    
-            
         for stations in data:
             nbVeloDispo_total.append(stations['totalStands']['availabilities']['bikes'])
             nbEmplacementDispo_total.append(stations['totalStands']['availabilities']['stands'])
@@ -162,12 +155,10 @@ def collect_data_csv(villes_api):
             statut.append(stations['status'])
             derniere_maj.append(stations['lastUpdate'])
     
-    
     #############################################################
     ####################POUR ECRIRE LES CSV######################
     #############################################################
     
-     
         with open("velib_" + str(ville) + ".csv", "a", encoding="utf-8") as outf:
             for i in range(len(data)):
                 outf.write(str(number[i]) + "," + nom_station[i] + "," + adresse_station[i]
@@ -178,7 +169,6 @@ def collect_data_csv(villes_api):
                 + str(nbVeloDispo_main[i]) + "," + str(Capacite_overflow[i]) + "," + str(nbEmplacementDispo_overflow[i]) + ","
                 + str(nbVeloDispo_overflow[i]) + "," + str(derniere_maj[i]) + "\n")
                 
-
 #############################################################
 ############## ECRITURE DE L'EN-TÊTE DU CSV  ################
 #############################################################
@@ -230,8 +220,6 @@ def collect_main():
 def collect_auto(delai_minutes,stop_collect):
     """
     Cette fonction permet automatiser la récupération des données au format CSV.
-   
-        
     @param      delai             Il s'agit du délai entre les différentes 
                                   périodes de récupération de données. Ce délai
                                   est en minutes.
